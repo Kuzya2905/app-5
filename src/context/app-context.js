@@ -12,6 +12,8 @@ export function AppContextProvider({ children }) {
   const [valueSearch, setValueSearch] = React.useState("");
   const [filterDate, setFilterDate] = React.useState(0);
   const firstRender = React.useRef(true);
+  const [geoError, setGeoError] = React.useState(false); // Флаг для контроля ошибки
+
   const weatherImg = {
     Thunderstorm: "./Images/Rain.png",
     Drizzle: "./Images/Rain.png",
@@ -46,18 +48,30 @@ export function AppContextProvider({ children }) {
   }, [valueSearch]);
 
   const requestGeoPosition = React.useCallback(async () => {
+    if (geoError) return; // Если уже была ошибка, не повторяем запрос
+
     try {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        const response = await axios.get(
-          `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&appid=553d2fd2f52245cdd55820f316fc1c80`
-        );
-        setValueSearch(response.data[0].name);
-      });
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const response = await axios.get(
+            `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&appid=553d2fd2f52245cdd55820f316fc1c80`
+          );
+          setValueSearch(response.data[0].name);
+          setGeoError(false); // Если всё прошло успешно, сбрасываем ошибку
+        },
+        (error) => {
+          setGeoError(true); // Устанавливаем ошибку
+          console.error("GeoLocation Error:", error);
+          alert("Неправильный запрос местоположения");
+        }
+      );
     } catch (error) {
+      setGeoError(true); // Устанавливаем ошибку в случае непредвиденной ошибки
+      console.error("GeoLocation Error:", error);
       alert("Неправильный запрос местоположения");
     }
-  }, []);
+  }, [geoError]);
 
   React.useEffect(() => {
     if (firstRender.current) {
